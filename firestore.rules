@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validations
+    function isValidUser(data) {
+      return data.email is string &&
+             data.subscriptionStatus in ['active', 'inactive', 'lapsed'] &&
+             (data.keys().hasAll(['email', 'subscriptionStatus']));
+    }
+
+    function isValidScore(data) {
+      return data.userId is string &&
+             data.value is number && data.value >= 1 && data.value <= 45 &&
+             data.date is string &&
+             data.userId == request.auth.uid;
+    }
+
+    // Users
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().isAdmin == false;
+      allow update: if (isOwner(userId) && isValidUser(incoming()) && incoming().isAdmin == existing().isAdmin &&
+                        incoming().diff(existing()).affectedKeys().hasOnly(['selectedCharityId', 'charityContributionPerc', 'subscriptionStatus', 'subscriptionPeriod', 'renewalDate'])) || isAdmin();
+    }
+
+    // Individual Scores (Subcollection)
+    match /users/{userId}/scores/{scoreId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidScore(incoming());
+      allow update: if isOwner(userId) && isValidScore(incoming()) && incoming().date == existing().date;
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Charities
+    match /charities/{charityId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Draws
+    match /draws/{drawId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Winnings
+    match /winnings/{winningId} {
+      allow get: if isOwner(existing().userId) || isAdmin();
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isAdmin();
+      allow update: if (isOwner(existing().userId) && incoming().diff(existing()).affectedKeys().hasOnly(['proofImage'])) || isAdmin();
+    }
+  }
+}

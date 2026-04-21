@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account and platform status",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "subscriptionStatus": { "type": "string", "enum": ["active", "inactive", "lapsed"] },
+        "subscriptionPeriod": { "type": "string", "enum": ["monthly", "yearly"] },
+        "renewalDate": { "type": "string", "format": "date-time" },
+        "selectedCharityId": { "type": "string" },
+        "charityContributionPerc": { "type": "number" },
+        "totalWon": { "type": "number" },
+        "isAdmin": { "type": "boolean" }
+      },
+      "required": ["email", "subscriptionStatus"]
+    },
+    "Score": {
+      "title": "Golf Score",
+      "description": "Stableford score entry",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "value": { "type": "number" },
+        "date": { "type": "string", "format": "date" }
+      },
+      "required": ["userId", "value", "date"]
+    },
+    "Charity": {
+      "title": "Charity Organization",
+      "description": "A charity that users can support",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "image": { "type": "string" },
+        "events": { "type": "array" }
+      },
+      "required": ["name", "description"]
+    },
+    "Draw": {
+      "title": "Monthly Draw",
+      "description": "Prize draw configuration and results",
+      "type": "object",
+      "properties": {
+        "month": { "type": "string" },
+        "prizePool": { "type": "number" },
+        "winningNumbers": { "type": "array" },
+        "status": { "type": "string", "enum": ["simulation", "published"] },
+        "jackpotRollover": { "type": "number" }
+      },
+      "required": ["month", "prizePool", "status"]
+    },
+    "Winning": {
+      "title": "User Winnings",
+      "description": "Details of a prize won by a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "drawId": { "type": "string" },
+        "matchType": { "type": "number" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "paid"] },
+        "proofImage": { "type": "string" }
+      },
+      "required": ["userId", "drawId", "matchType", "amount", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/users/{userId}/scores/{scoreId}": {
+      "schema": "Score",
+      "description": "User individual golf scores"
+    },
+    "/charities/{charityId}": {
+      "schema": "Charity",
+      "description": "Listing of supported charities"
+    },
+    "/draws/{drawId}": {
+      "schema": "Draw",
+      "description": "Monthly prize draws"
+    },
+    "/winnings/{winningId}": {
+      "schema": "Winning",
+      "description": "Results and payout tracking"
+    }
+  }
+}
